@@ -1,2 +1,2 @@
-# celeb-look-alike
-Find your celebrity look alike
+# Celeb Look-Alike
+Find your celebrity look-alike
