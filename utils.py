@@ -1,15 +1,17 @@
-import random
-import sys
 import os
 import numpy as np
 import cv2
 import time
-import face_recognition
-from math import sqrt
 import pandas as pd
 import scipy.io
 from facedb import FaceDB
 from unidecode import unidecode
+import logging
+from cv2 import dnn_superres
+
+
+TEMP_PATH = 'temp'
+logging.basicConfig(level=logging.INFO, format="%(asctime)s: [%(levelname)s]: %(message)s")
 
 
 # Create a FaceDB instance
@@ -17,10 +19,32 @@ db = FaceDB(
     path="facedata",
 )
 
+# Create an SR object
+sr = dnn_superres.DnnSuperResImpl_create()
+# Read the desired model
+path = "weights/EDSR_x4.pb"
+sr.readModel(path)
+
+# Set the desired model and scale to get correct pre- and post-processing
+sr.setModel("edsr", 4)
+# Set CUDA backend and target to enable GPU inference
+sr.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+sr.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+
+def create_temp():
+    if not os.path.exists(TEMP_PATH):
+        os.makedirs(TEMP_PATH)
+        
+        
+def remove_temp_image(id):
+    os.remove(TEMP_PATH + '/' + id + '.jpg')
+
 
 def load_metadata(metadata_path):
     # Ref https://data.vision.ee.ethz.ch/cvl/rrothe/imdb-wiki/
     # https://data.vision.ee.ethz.ch/cvl/rrothe/imdb-wiki/static/imdb_crop.tar
+    logging.info('Loading metadata...')
     mat = scipy.io.loadmat(metadata_path)
 
     columns = ["dob", "photo_taken", "full_path", "gender", "name", "face_location", "face_score", "second_face_score", "celeb_names", "celeb_id"]
@@ -45,8 +69,8 @@ def load_metadata(metadata_path):
     #check threshold
     df = df[df['face_score'] >= 3]
     
-    df['celebrity_name'] = df['name'].str[0]
-    print('Loading metadata is completed.')
+    df['celebrity_name'] = df['name'].str[0] 
+    logging.info('Loading metadata is completed.')
     
     return df
     
@@ -57,18 +81,30 @@ def get_image_pixels(image_path):
 
 
 def load_dataset(df):
-    print('Loading dataset is started.')
+    logging.info('Loading dataset is started.')
     tic = time.time()
     df['pixels'] = df['full_path'].apply(get_image_pixels)
     toc = time.time()
 
-    print("Loading dataset completed in ",toc-tic," seconds...")
+    logging.info('Loading dataset completed in ' + str(toc-tic) + ' seconds...')
     
     return df
 
 
+def upscale(image):
+    logging.info('Upscaling the image...')
+    tic = time.time()
+    # Upscale the image
+    result = sr.upsample(image)
+    
+    toc = time.time()
+    logging.info('Upscaling completed in ' + str(toc-tic) + ' seconds...')
+    
+    return result
+
+
 def load_faces(df):
-    print('Loading faces is started.')
+    logging.info('Loading faces is started.')
     tic = time.time()
     df = df.reset_index()
     imgs = []
@@ -78,8 +114,9 @@ def load_faces(df):
             unicode_name = unidecode(row['celebrity_name'])
         except AttributeError as e:
             unicode_name = str(row['celebrity_name'])
-        imgs.append('data/wiki_crop/' + row['full_path'][0])
-        names.append(unicode_name)
+        if unicode_name not in names:
+            names.append(unicode_name)
+            imgs.append('/home/tinbicen/Downloads/wiki/' + row['full_path'][0])
 
     ids, failed_indexes = db.add_many(
         imgs=imgs,
@@ -87,14 +124,20 @@ def load_faces(df):
     )
   
     toc = time.time()
-    print("Loading faces completed in ",toc-tic," seconds...")
+    logging.info('Loading faces completed in ' + str(toc-tic) + ' seconds...')
     
     
 def find_similar_face(image_path):
+    logging.info('Finding similar faces...')
+    tic = time.time()
     # Search for similar faces
-    results = db.search(img=image_path, top_k=5, include=['name'])[0]
+    results = db.search(img=image_path, top_k=1, include=['name', 'img'])[0]
 
     for result in results:
+        # result.show_img()
         print(f"Found {result['name']} with distance {result['distance']}")
+    
+    toc = time.time()
+    logging.info('Found faces in ' + str(toc-tic) + ' seconds...') 
     
     return results
