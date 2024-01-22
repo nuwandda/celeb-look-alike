@@ -3,3 +3,4 @@ omegaconf
 scipy
 face_recognition
 facedb
+pandas
