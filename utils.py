@@ -8,6 +8,11 @@ from facedb import FaceDB
 from unidecode import unidecode
 import logging
 from cv2 import dnn_superres
+import torch
+import srgan.model as model
+from srgan.imgproc import preprocess_one_image, tensor_to_image
+from srgan.utils import load_pretrained_state_dict
+from torch import nn
 
 
 TEMP_PATH = 'temp'
@@ -19,17 +24,29 @@ db = FaceDB(
     path="facedata",
 )
 
-# Create an SR object
-sr = dnn_superres.DnnSuperResImpl_create()
-# Read the desired model
-path = "weights/EDSR_x4.pb"
-sr.readModel(path)
+def build_model(model_arch_name: str, device: torch.device) -> nn.Module:
+    # Initialize the super-resolution model
+    sr_model = model.__dict__[model_arch_name]()
+    print(f"Build srresnet_x4 model successfully.")
 
-# Set the desired model and scale to get correct pre- and post-processing
-sr.setModel("edsr", 4)
-# Set CUDA backend and target to enable GPU inference
-sr.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-sr.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+    # Load model weights
+    sr_model = load_pretrained_state_dict(sr_model, False, 'srgan/results/pretrained_models/SRGAN_x4-SRGAN_ImageNet.pth.tar')
+    print(f"Load model weights `{os.path.abspath('srgan/results/pretrained_models/SRGAN_x4-SRGAN_ImageNet.pth.tar')}` successfully.")
+
+    # Start the verification mode of the model.
+    sr_model.eval()
+
+    # Enable half-precision inference to reduce memory usage and inference time
+    sr_model.half()
+
+    sr_model = sr_model.to(device)
+
+    return sr_model
+
+
+device = torch.device('cuda:0')
+# Initialize the model
+sr_model = build_model('srresnet_x4', device)
 
 
 def create_temp():
@@ -95,7 +112,16 @@ def upscale(image):
     logging.info('Upscaling the image...')
     tic = time.time()
     # Upscale the image
-    result = sr.upsample(image)
+    input_tensor = preprocess_one_image(image, False, True, device)
+
+    # Use the model to generate super-resolved images
+    with torch.no_grad():
+        # Reasoning
+        sr_tensor = sr_model(input_tensor)
+
+    # Save image
+    cr_image = tensor_to_image(sr_tensor, False, True)
+    result = cv2.cvtColor(cr_image, cv2.COLOR_RGB2BGR)
     
     toc = time.time()
     logging.info('Upscaling completed in ' + str(toc-tic) + ' seconds...')
