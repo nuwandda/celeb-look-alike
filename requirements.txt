@@ -5,5 +5,4 @@ face_recognition
 facedb
 pandas
 unidecode
-torch
-torchvision
+wikipedia-api
