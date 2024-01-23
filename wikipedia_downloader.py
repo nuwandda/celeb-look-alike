@@ -1,0 +1,79 @@
+import wikipediaapi
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse, urljoin
+import cv2
+from utils import create_temp_download, remove_temp_download_image, TEMP_DOWNLOAD_PATH
+
+
+def get_main_image_url(page):
+    response = requests.get(page.fullurl)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    if '\n' in soup.find('td', {'class': 'infobox-image'}).contents:
+        soup.find('td', {'class': 'infobox-image'}).contents.remove('\n')
+    img_tag = soup.find('td', {'class': 'infobox-image'}).contents[0].contents[0].attrs['href']
+    img_tag = img_tag.split('/')[-1]
+    img_tag = img_tag.split(':')[-1]
+    img_tag = 'File:' + img_tag
+    # https://www.wikiwand.com/tr/Dosya:Einstein_1921_by_F_Schmutzer_-_restoration.jpg
+    img_url = 'https://www.wikiwand.com/en/' + img_tag  # Make the URL absolute
+    response = requests.get(img_url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    img_tag = soup.find('a', {'class': 'internal'}).attrs['href']
+
+    if img_tag:
+        # https://upload.wikimedia.org/wikipedia/commons/6/6a/Johann_Sebastian_Bach.jpg
+        img_url = 'https:' + img_tag  # Make the URL absolute
+        return img_url
+    else:
+        return None
+
+
+def download_image(url, save_path, headers):
+    response = requests.get(url, headers=headers)
+    with open(save_path, 'wb') as file:
+        file.write(response.content)
+        
+        
+def load_image_as_opencv(image_path):
+    image = cv2.imread(image_path)
+    return image
+        
+        
+def get_image(person_name, temp_id):
+    create_temp_download()
+    
+    # Set a compliant user agent
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+
+    # Search for the person's name using the Wikipedia API
+    wiki_wiki = wikipediaapi.Wikipedia('en', headers=headers)
+    search_result = wiki_wiki.page(person_name)
+
+    if not search_result.exists():
+        print(f"No Wikipedia page found for '{person_name}'.")
+        return
+
+    # Get information about the first search result (assumes it's the most relevant)
+    page_title = search_result.title
+    page = wiki_wiki.page(page_title)
+
+    if not page.exists():
+        print(f"No Wikipedia page found for '{person_name}'.")
+        return
+
+    main_image_url = get_main_image_url(page)
+
+    if main_image_url:
+        # Replace 'path/to/save/image.jpg' with the desired local path to save the image
+        save_path = TEMP_DOWNLOAD_PATH + '/' + temp_id + '.jpg'
+        download_image(main_image_url, save_path, headers)
+        # Convert the downloaded image to an OpenCV image
+        opencv_image = load_image_as_opencv(save_path)
+        remove_temp_download_image(temp_id)
+        print(f"Image downloaded successfully to '{save_path}'.")
+        return opencv_image
+    else:
+        print(f"No main image found for '{person_name}'.")
