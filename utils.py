@@ -7,7 +7,6 @@ import scipy.io
 from facedb import FaceDB
 from unidecode import unidecode
 import logging
-from cv2 import dnn_superres
 import torch
 import srgan.model as model
 from srgan.imgproc import preprocess_one_image, tensor_to_image
