@@ -7,14 +7,10 @@ import scipy.io
 from facedb import FaceDB
 from unidecode import unidecode
 import logging
-import torch
-import srgan.model as model
-from srgan.imgproc import preprocess_one_image, tensor_to_image
-from srgan.utils import load_pretrained_state_dict
-from torch import nn
 
 
 TEMP_PATH = 'temp'
+TEMP_DOWNLOAD_PATH = 'temp_download'
 logging.basicConfig(level=logging.INFO, format="%(asctime)s: [%(levelname)s]: %(message)s")
 
 
@@ -23,38 +19,23 @@ db = FaceDB(
     path="facedata",
 )
 
-def build_model(model_arch_name: str, device: torch.device) -> nn.Module:
-    # Initialize the super-resolution model
-    sr_model = model.__dict__[model_arch_name]()
-    print(f"Build srresnet_x4 model successfully.")
-
-    # Load model weights
-    sr_model = load_pretrained_state_dict(sr_model, False, 'srgan/results/pretrained_models/SRGAN_x4-SRGAN_ImageNet.pth.tar')
-    print(f"Load model weights `{os.path.abspath('srgan/results/pretrained_models/SRGAN_x4-SRGAN_ImageNet.pth.tar')}` successfully.")
-
-    # Start the verification mode of the model.
-    sr_model.eval()
-
-    # Enable half-precision inference to reduce memory usage and inference time
-    sr_model.half()
-
-    sr_model = sr_model.to(device)
-
-    return sr_model
-
-
-device = torch.device('cuda:0')
-# Initialize the model
-sr_model = build_model('srresnet_x4', device)
-
 
 def create_temp():
     if not os.path.exists(TEMP_PATH):
         os.makedirs(TEMP_PATH)
         
         
+def create_temp_download():
+    if not os.path.exists(TEMP_DOWNLOAD_PATH):
+        os.makedirs(TEMP_DOWNLOAD_PATH)
+        
+        
 def remove_temp_image(id):
     os.remove(TEMP_PATH + '/' + id + '.jpg')
+    
+    
+def remove_temp_download_image(id):
+    os.remove(TEMP_DOWNLOAD_PATH + '/' + id + '.jpg')
 
 
 def load_metadata(metadata_path):
@@ -105,27 +86,6 @@ def load_dataset(df):
     logging.info('Loading dataset completed in ' + str(toc-tic) + ' seconds...')
     
     return df
-
-
-def upscale(image):
-    logging.info('Upscaling the image...')
-    tic = time.time()
-    # Upscale the image
-    input_tensor = preprocess_one_image(image, False, True, device)
-
-    # Use the model to generate super-resolved images
-    with torch.no_grad():
-        # Reasoning
-        sr_tensor = sr_model(input_tensor)
-
-    # Save image
-    cr_image = tensor_to_image(sr_tensor, False, True)
-    result = cv2.cvtColor(cr_image, cv2.COLOR_RGB2BGR)
-    
-    toc = time.time()
-    logging.info('Upscaling completed in ' + str(toc-tic) + ' seconds...')
-    
-    return result
 
 
 def load_faces(df):
