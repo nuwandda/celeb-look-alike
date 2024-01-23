@@ -6,3 +6,4 @@ facedb
 pandas
 unidecode
 wikipedia-api
+beautifulsoup4
