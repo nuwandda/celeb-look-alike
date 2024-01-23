@@ -20,4 +20,4 @@ COPY requirements.txt /usr/app/requirements.txt
 RUN pip install -r requirements.txt
 COPY . .
 
-CMD ["uvicorn", "app:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "80", "--workers", "3"]
+CMD ["uvicorn", "app:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "8080", "--workers", "3"]
