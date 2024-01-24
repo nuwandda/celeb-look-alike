@@ -7,10 +7,10 @@ import scipy.io
 from facedb import FaceDB
 from unidecode import unidecode
 import logging
+from wikipedia_downloader import get_popularity
 
 
 TEMP_PATH = 'temp'
-TEMP_DOWNLOAD_PATH = 'temp_download'
 logging.basicConfig(level=logging.INFO, format="%(asctime)s: [%(levelname)s]: %(message)s")
 
 
@@ -25,17 +25,8 @@ def create_temp():
         os.makedirs(TEMP_PATH)
         
         
-def create_temp_download():
-    if not os.path.exists(TEMP_DOWNLOAD_PATH):
-        os.makedirs(TEMP_DOWNLOAD_PATH)
-        
-        
 def remove_temp_image(id):
     os.remove(TEMP_PATH + '/' + id + '.jpg')
-    
-    
-def remove_temp_download_image(id):
-    os.remove(TEMP_DOWNLOAD_PATH + '/' + id + '.jpg')
 
 
 def load_metadata(metadata_path):
@@ -66,7 +57,7 @@ def load_metadata(metadata_path):
     #check threshold
     df = df[df['face_score'] >= 3]
     
-    df['celebrity_name'] = df['name'].str[0] 
+    df['celebrity_name'] = df['name'].str[0]
     logging.info('Loading metadata is completed.')
     
     return df
@@ -116,13 +107,20 @@ def find_similar_face(image_path):
     logging.info('Finding similar faces...')
     tic = time.time()
     # Search for similar faces
-    results = db.search(img=image_path, top_k=1, include=['name', 'img'])[0]
+    results = db.search(img=image_path, top_k=5, include=['name', 'img'])[0]
 
+    final_result = None
+    final_page_view = 0
     for result in results:
         # result.show_img()
         print(f"Found {result['name']} with distance {result['distance']}")
+        current_page_view = get_popularity(result['name'])
+        if current_page_view > final_page_view:
+            final_page_view = current_page_view
+            final_result = result
+        
     
     toc = time.time()
     logging.info('Found faces in ' + str(toc-tic) + ' seconds...') 
     
-    return results
+    return final_result
