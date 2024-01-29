@@ -103,7 +103,7 @@ def load_faces(df):
     logging.info('Loading faces completed in ' + str(toc-tic) + ' seconds...')
     
     
-def find_similar_face(image_path):
+def find_similar_face(image_path, df, gender):
     logging.info('Finding similar faces...')
     tic = time.time()
     # Search for similar faces
@@ -115,7 +115,8 @@ def find_similar_face(image_path):
         # result.show_img()
         print(f"Found {result['name']} with distance {result['distance']}")
         current_page_view = get_popularity(result['name'])
-        if current_page_view > final_page_view:
+        current_gender = 'male' if (df.loc[df['celebrity_name'] == result['name']]['gender']).item() == 1.0 else 'female'
+        if current_page_view > final_page_view and current_gender == gender:
             final_page_view = current_page_view
             final_result = result
         

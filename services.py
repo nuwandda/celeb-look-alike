@@ -15,6 +15,7 @@ load_dotenv()
 """
 Note: make sure .env exist and contains your token
 """
+df = utils.load_metadata('/home/tinbicen/Downloads/wiki/wiki.mat')
 
 
 async def find_look_alike(query: _schemas._QueryBase) -> Image:
@@ -25,7 +26,7 @@ async def find_look_alike(query: _schemas._QueryBase) -> Image:
     init_image = Image.open(BytesIO(request_object_content))
     init_image = init_image.save(utils.TEMP_PATH + '/' + temp_id + '.jpg')
     
-    result = utils.find_similar_face(utils.TEMP_PATH + '/' + temp_id + '.jpg')
+    result = utils.find_similar_face(utils.TEMP_PATH + '/' + temp_id + '.jpg', df, query.gender)
     upscaled_image = wikipedia_downloader.get_image(result['name'], temp_id)
     utils.remove_temp_image(temp_id)
     _, im_png = cv2.imencode(".jpg", upscaled_image)

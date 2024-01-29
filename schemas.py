@@ -5,3 +5,4 @@ from fastapi import UploadFile
 
 class _QueryBase(_pydantic.BaseModel):
     encoded_base_img: UploadFile
+    gender: str

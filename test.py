@@ -6,7 +6,7 @@ import pickle
 
         
 def main():
-    # df = utils.load_metadata('/home/tinbicen/Downloads/wiki/wiki.mat')
+    df = utils.load_metadata('/home/tinbicen/Downloads/wiki/wiki.mat')
     # my_dict = wikipedia_downloader.load_popularity(df)
     # print(my_dict)
 
@@ -14,7 +14,7 @@ def main():
     # utils.load_faces(df)
     # image = Image.open('ERT_6233 copy.JPG')
     # temp = Image.open('test.jpeg')
-    result = utils.find_similar_face('anne.jpg')
+    result = utils.find_similar_face('anne.jpg', df, 'female')
     im_res = wikipedia_downloader.get_image(result['name'], '123')
     # im_res = utils.upscale(result['img'])
     cv2.imwrite('test.jpg', im_res)
