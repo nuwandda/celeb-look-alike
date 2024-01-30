@@ -15,7 +15,7 @@ load_dotenv()
 """
 Note: make sure .env exist and contains your token
 """
-df = utils.load_metadata('/home/tinbicen/Downloads/wiki/wiki.mat')
+df = utils.load_metadata('wiki.mat')
 
 
 async def find_look_alike(query: _schemas._QueryBase) -> Image:
