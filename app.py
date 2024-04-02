@@ -25,7 +25,7 @@ async def root():
 async def find(query: _schemas._QueryBase = _fapi.Depends()):
     
     try:
-        image, name = await _services.find_look_alike(query=query)
+        images, names = await _services.find_look_alike(query=query)
     except Exception as e:
         print(traceback.format_exc())
         return {"message": f"{e.args}"}
@@ -33,11 +33,15 @@ async def find(query: _schemas._QueryBase = _fapi.Depends()):
     # memory_stream = io.BytesIO()
     # image.save(memory_stream, format="PNG")
     # memory_stream.seek(0)
-    encoded_img = base64.b64encode(image)
+    encoded_img1 = base64.b64encode(images[0])
+    encoded_img2 = base64.b64encode(images[1])
+    encoded_img3 = base64.b64encode(images[2])
     payload = {
        "mime" : "image/jpg",
-       "image": encoded_img,
-       "name": name
+       "image1": encoded_img1,
+       "image2": encoded_img2,
+       "image3": encoded_img3,
+       "names": names
    }
     # return StreamingResponse(memory_stream, media_type="image/png")
     return payload

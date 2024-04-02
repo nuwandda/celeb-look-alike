@@ -150,19 +150,29 @@ def find_similar_face(image_path, df, gender):
     # Search for similar faces
     results = db.search(img=image_path, top_k=5, include=['name', 'img'])[0]
 
-    final_result = None
+    final_results = []
     final_page_view = 0
     for result in results:
         # result.show_img()
         print(f"Found {result['name']} with distance {result['distance']}")
         current_page_view = get_popularity(result['name'])
         current_gender = 'male' if (df.loc[df['celebrity_name'] == result['name']]['gender']).item() == 1.0 else 'female'
-        if current_page_view > final_page_view and current_gender == gender:
-            final_page_view = current_page_view
+        if current_gender == gender:
             final_result = result
+            final_results.append({
+                'name': result['name'],
+                'page_view': int(current_page_view),
+                'gender': current_gender
+            })
+
+    # Sorting the list of dictionaries based on the 'key' item
+    sorted_list_of_dicts = sorted(final_results, key=lambda x: x['page_view'], reverse=True)
+
+    # Extracting the top three dictionaries after sorting
+    top_three_dicts = sorted_list_of_dicts[:3]
         
     
     toc = time.time()
     logging.info('Found faces in ' + str(toc-tic) + ' seconds...') 
     
-    return final_result
+    return top_three_dicts
