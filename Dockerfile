@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.0.0-cudnn8-devel-ubuntu22.04
+FROM ubuntu:latest
 
 WORKDIR /usr/app
 
@@ -15,10 +15,9 @@ RUN apt install python3-pip -y
 RUN apt-get install git-lfs
 RUN git lfs install
 RUN git clone https://huggingface.co/datasets/nuwandaa/facedata
-ENV LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/python3.8/dist-packages/nvidia/cudnn/lib"
 
 COPY requirements.txt /usr/app/requirements.txt
 RUN pip install -r requirements.txt
 COPY . .
 
-CMD ["uvicorn", "app:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "8080", "--workers", "3"]
+CMD ["uvicorn", "app:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "80", "--workers", "3"]
